@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import Logo from "./components/Logo";
+import { useAuthenticator } from "@aws-amplify/ui-react";
 
 const PHOTOS = [
   { id: 1, src: "https://loremflickr.com/400/500/family?lock=1" },
@@ -16,7 +16,8 @@ const PHOTOS = [
 ];
 
 export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { authStatus } = useAuthenticator((context) => [context.authStatus]);
+  const isLoggedIn = authStatus === "authenticated";
 
   return (
     <div className="min-h-screen bg-amber-50">
@@ -78,8 +79,6 @@ export default function Home() {
           ))}
         </div>
       </section>
-
-
     </div>
   );
 }

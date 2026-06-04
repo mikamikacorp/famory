@@ -3,14 +3,22 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import Logo from "../components/Logo";
-
+import { useAuthenticator } from "@aws-amplify/ui-react";
+import { useRouter } from "next/navigation";
 
 export default function Dashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const { signOut } = useAuthenticator((context) => [context.user]);
+  const router = useRouter();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedFiles(e.target.files);
+  };
+
+  const handleSignOut = () => {
+    signOut();
+    router.push("/");
   };
 
   return (
@@ -18,7 +26,10 @@ export default function Dashboard() {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-amber-100 px-8 py-4 flex items-center justify-between">
         <Logo />
-        <button className="text-sm text-stone-400 hover:text-stone-600 transition-colors">
+        <button
+          onClick={handleSignOut}
+          className="text-sm text-stone-400 hover:text-stone-600 transition-colors"
+        >
           ログアウト
         </button>
       </header>
