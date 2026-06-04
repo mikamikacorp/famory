@@ -22,7 +22,7 @@ export default function LoginPage() {
         <Logo />
       </header>
       <div className="flex-1 flex items-center justify-center p-6">
-        <Authenticator>
+        <Authenticator loginMechanisms={["email"]}>
           <RedirectToDashboard />
         </Authenticator>
       </div>
