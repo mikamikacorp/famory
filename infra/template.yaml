@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Famory – API Gateway + Lambda + S3
+
+Parameters:
+  Stage:
+    Type: String
+    Default: prod
+  CognitoUserPoolId:
+    Type: String
+    Default: ap-northeast-1_S7DX7xyJb
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Timeout: 30
+    Architectures: [arm64]
+    Environment:
+      Variables:
+        PHOTOS_BUCKET: !Ref PhotosBucket
+
+Resources:
+  # ---------- S3 ----------
+  PhotosBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub famory-photos-${AWS::AccountId}
+      CorsConfiguration:
+        CorsRules:
+          - AllowedMethods: [PUT]
+            AllowedOrigins: ['*']
+            AllowedHeaders: ['*']
+            MaxAge: 3600
+
+  # ---------- API Gateway ----------
+  FamoryApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Stage
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
+        AddDefaultAuthorizerToCorsPreflight: false
+      Cors:
+        AllowOrigin: "'*'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowMethods: "'OPTIONS,POST'"
+
+  # ---------- Lambda ----------
+  UploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/upload/
+      Handler: index.handler
+      Description: Cognito認証済みユーザー向けにS3 presigned PUT URLを発行する
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref PhotosBucket
+      Events:
+        UploadPost:
+          Type: Api
+          Properties:
+            RestApiId: !Ref FamoryApi
+            Path: /upload
+            Method: POST
+
+# ---------- Outputs ----------
+Outputs:
+  ApiUrl:
+    Description: NEXT_PUBLIC_API_GATEWAY_URL に設定する値
+    Value: !Sub https://${FamoryApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
+  PhotosBucketName:
+    Value: !Ref PhotosBucket
