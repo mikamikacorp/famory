@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Logo from "../components/Logo";
 import { useAuthenticator } from "@aws-amplify/ui-react";
 import { fetchAuthSession } from "aws-amplify/auth";
@@ -14,11 +14,27 @@ export default function Dashboard() {
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [uploadMessage, setUploadMessage] = useState("");
-  const { signOut } = useAuthenticator((context) => [context.user]);
+  const { signOut, authStatus } = useAuthenticator((context) => [context.authStatus]);
   const router = useRouter();
 
+  useEffect(() => {
+    if (authStatus === "unauthenticated") {
+      router.replace("/login");
+    }
+  }, [authStatus, router]);
+
+  const MAX_FILES = 20;
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedFiles(e.target.files);
+    const files = e.target.files;
+    if (files && files.length > MAX_FILES) {
+      setUploadState("error");
+      setUploadMessage(`一度にアップロードできる写真は${MAX_FILES}枚までです`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setSelectedFiles(null);
+      return;
+    }
+    setSelectedFiles(files);
     setUploadState("idle");
     setUploadMessage("");
   };
@@ -83,6 +99,10 @@ export default function Dashboard() {
     }
   };
 
+  if (authStatus !== "authenticated") {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-amber-50">
       {/* Header */}
@@ -108,7 +128,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="font-semibold text-stone-800">写真をアップロード</p>
-                <p className="text-stone-400 text-sm">家族の写真を選んでアップロードしましょう</p>
+                <p className="text-stone-400 text-sm">家族の写真を選んでアップロードしましょう（最大20枚）</p>
               </div>
             </div>
 
@@ -122,15 +142,31 @@ export default function Dashboard() {
             />
 
             <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadState === "uploading"}
-                className="flex-1 py-3 rounded-xl border border-stone-200 hover:border-amber-400 hover:bg-amber-50 text-stone-600 text-sm font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                {selectedFiles && selectedFiles.length > 0
-                  ? `${selectedFiles.length}枚選択中`
-                  : "写真を選択"}
-              </button>
+              <div className="flex-1 flex gap-2">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadState === "uploading"}
+                  className="flex-1 py-3 rounded-xl border border-stone-200 hover:border-amber-400 hover:bg-amber-50 text-stone-600 text-sm font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  {selectedFiles && selectedFiles.length > 0
+                    ? `${selectedFiles.length}枚選択中`
+                    : "写真を選択"}
+                </button>
+                {selectedFiles && selectedFiles.length > 0 && uploadState !== "uploading" && (
+                  <button
+                    onClick={() => {
+                      setSelectedFiles(null);
+                      setUploadState("idle");
+                      setUploadMessage("");
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="px-3 py-3 rounded-xl border border-stone-200 hover:border-red-300 hover:bg-red-50 text-stone-400 hover:text-red-400 text-sm transition-all"
+                    aria-label="選択解除"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
               <button
                 onClick={handleUpload}
                 disabled={!selectedFiles || selectedFiles.length === 0 || uploadState === "uploading"}
@@ -148,11 +184,8 @@ export default function Dashboard() {
           </div>
 
           {/* Download Card */}
-          <Link
-            href="/download"
-            className="group bg-white border border-amber-100 hover:border-amber-300 rounded-2xl p-6 flex items-center justify-between shadow-sm transition-all"
-          >
-            <div className="flex items-center gap-3">
+          <div className="bg-white border border-amber-100 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
                 <span className="text-lg">🎬</span>
               </div>
@@ -161,8 +194,13 @@ export default function Dashboard() {
                 <p className="text-stone-400 text-sm">作成済みのスライドショーを保存</p>
               </div>
             </div>
-            <span className="text-stone-300 group-hover:text-amber-500 transition-colors text-xl">→</span>
-          </Link>
+            <Link
+              href="/download"
+              className="block w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold text-center transition-colors"
+            >
+              ダウンロードページへ
+            </Link>
+          </div>
         </div>
       </main>
     </div>
