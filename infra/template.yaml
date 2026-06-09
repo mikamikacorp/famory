@@ -71,6 +71,28 @@ Resources:
             Path: /upload
             Method: POST
 
+  RekognitionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/rekognition/
+      Handler: index.handler
+      Description: S3アップロード完了後にRekognitionコレクションを作成し顔をインデックス化する
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref PhotosBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - rekognition:CreateCollection
+                - rekognition:IndexFaces
+              Resource: !Sub arn:aws:rekognition:${AWS::Region}:${AWS::AccountId}:collection/famory-*
+      Events:
+        S3Upload:
+          Type: S3
+          Properties:
+            Bucket: !Ref PhotosBucket
+            Events: s3:ObjectCreated:*
+
 # ---------- Outputs ----------
 Outputs:
   ApiUrl:
