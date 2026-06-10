@@ -5,19 +5,16 @@ Description: Famory – API Gateway + Lambda + S3
 Parameters:
   Stage:
     Type: String
-    Default: prod
+    Default: prd
   CognitoUserPoolId:
     Type: String
-    Default: ap-northeast-1_S7DX7xyJb
+    Default: hogehoge
 
 Globals:
   Function:
     Runtime: nodejs22.x
     Timeout: 30
     Architectures: [arm64]
-    Environment:
-      Variables:
-        PHOTOS_BUCKET: !Ref PhotosBucket
 
 Resources:
   # ---------- S3 ----------
@@ -65,6 +62,9 @@ Resources:
       CodeUri: lambda/upload/
       Handler: index.handler
       Description: Cognito認証済みユーザー向けにS3 presigned PUT URLを発行する
+      Environment:
+        Variables:
+          PHOTOS_BUCKET: !Ref PhotosBucket
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref PhotosBucket
