@@ -28,7 +28,7 @@ export const handler = async (event) => {
         new IndexFacesCommand({
           CollectionId: collectionId,
           Image: { S3Object: { Bucket: BUCKET, Name: key } },
-          ExternalImageId: key,
+          ExternalImageId: key.replace(/[^a-zA-Z0-9_.\-:]/g, "_").slice(0, 255),
           DetectionAttributes: [],
         })
       );
