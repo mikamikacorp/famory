@@ -23,6 +23,7 @@ Resources:
   # ---------- S3 ----------
   PhotosBucket:
     Type: AWS::S3::Bucket
+    DependsOn: RekognitionLambdaPermission
     Properties:
       BucketName: !Sub famory-photos-${AWS::AccountId}
       CorsConfiguration:
@@ -36,6 +37,10 @@ Resources:
           - Id: DeleteAfter3Days
             Status: Enabled
             ExpirationInDays: 3
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt RekognitionFunction.Arn
 
   # ---------- API Gateway ----------
   FamoryApi:
@@ -71,27 +76,33 @@ Resources:
             Path: /upload
             Method: POST
 
+  RekognitionLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt RekognitionFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub arn:aws:s3:::famory-photos-${AWS::AccountId}
+
   RekognitionFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: lambda/rekognition/
       Handler: index.handler
       Description: S3アップロード完了後にRekognitionコレクションを作成し顔をインデックス化する
+      Environment:
+        Variables:
+          PHOTOS_BUCKET: !Sub 'famory-photos-${AWS::AccountId}'
       Policies:
         - S3ReadPolicy:
-            BucketName: !Ref PhotosBucket
+            BucketName: !Sub 'famory-photos-${AWS::AccountId}'
         - Statement:
             - Effect: Allow
               Action:
                 - rekognition:CreateCollection
                 - rekognition:IndexFaces
               Resource: !Sub arn:aws:rekognition:${AWS::Region}:${AWS::AccountId}:collection/famory-*
-      Events:
-        S3Upload:
-          Type: S3
-          Properties:
-            Bucket: !Ref PhotosBucket
-            Events: s3:ObjectCreated:*
 
 # ---------- Outputs ----------
 Outputs:
