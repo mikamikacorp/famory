@@ -1,8 +1,0 @@
-{
-  "name": "famory-rekognition-lambda",
-  "version": "1.0.0",
-  "type": "module",
-  "dependencies": {
-    "@aws-sdk/client-rekognition": "^3"
-  }
-}
